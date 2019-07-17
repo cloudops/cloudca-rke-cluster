@@ -1,0 +1,13 @@
+terraform.tfvars
+terraform.tfplan
+terraform.tfstate*
+.terraform.tfstate*
+.terraform/
+*.swp
+crash.log
+id_rsa
+id_rsa.pub
+*_override.tf
+*.pem
+tflog
+kube_config_cluster.yml
