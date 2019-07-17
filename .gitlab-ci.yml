@@ -1,0 +1,58 @@
+image:
+  name: hashicorp/terraform:0.12.4
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+stages:
+  - validate
+  - plan
+  - deploy
+
+variables:
+  PLAN: terraform.tfplan
+
+cache:
+  paths:
+    - .terraform
+
+before_script:
+  - apk add --update make curl
+  - |
+    curl -sL https://github.com/cloud-ca/terraform-provider-cloudca/releases/download/v1.5.0/terraform-provider-cloudca_v1.5.0_linux-amd64.zip > terraform-provider-cloudca.zip && \
+    mkdir -p ~/.terraform.d/plugins && \
+    unzip -q terraform-provider-cloudca.zip -d ~/.terraform.d/plugins && \
+    rm terraform-provider-cloudca.zip
+  - terraform --version
+  - make init
+
+validate:
+  stage: validate
+  script:
+    - make validate
+
+checkfmt:
+  stage: validate
+  script:
+    - make checkfmt
+
+plan:
+  stage: plan
+  script:
+    - TFPLAN=$PLAN make plan
+  artifacts:
+    name: plan
+    paths:
+      - $PLAN
+
+apply:
+  stage: deploy
+  environment:
+    name: prod
+  script:
+    - TFPLAN=$PLAN make apply
+  dependencies:
+    - plan
+  when: manual
+  only:
+    - master

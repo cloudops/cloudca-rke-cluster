@@ -1,0 +1,81 @@
+_defaults: &defaults
+  docker:
+    - image: hashicorp/terraform:0.12.4
+
+_run:
+  setenv: &setenv
+    name: "Setup Environment"
+    command: |-
+        apk add --update make curl
+        curl -sL https://github.com/cloud-ca/terraform-provider-cloudca/releases/download/v1.5.0/terraform-provider-cloudca_v1.5.0_linux-amd64.zip > terraform-provider-cloudca.zip && \
+        mkdir -p ~/.terraform.d/plugins && \
+        unzip -q terraform-provider-cloudca.zip -d ~/.terraform.d/plugins && \
+        rm terraform-provider-cloudca.zip
+        terraform --version
+        make init
+
+version: 2
+jobs:
+  validate:
+    <<: *defaults
+    steps:
+    - run: *setenv
+    - run:
+        name: "Validate Terraform configs"
+        command: make validate
+
+  checkfmt:
+    <<: *defaults
+    steps:
+    - run: *setenv
+    - run:
+        name: "Check formatting of all tf files"
+        command: make checkfmt
+
+  plan:
+    <<: *defaults
+    steps:
+    - run: *setenv
+    - run:
+        name: "Plan the Terraform config"
+        command: TFPLAN=terraform.tfplan make plan
+    - save_cache:
+        key: terraform-tfplan-{{ .Environment.CIRCLE_SHA1 }}
+        paths:
+            - terraform.tfplan
+
+  apply:
+    <<: *defaults
+    steps:
+    - restore_cache:
+        key: terraform-tfplan-{{ .Environment.CIRCLE_SHA1 }}
+    - run: *setenv
+    - run:
+        name: "Apply the Terraform config"
+        command: TFPLAN=terraform.tfplan make apply
+
+workflows:
+  version: 2
+  build:
+    jobs:
+    - validate:
+        filters:
+          tags:
+            only: /v.*/
+    - checkfmt:
+        filters:
+          tags:
+            only: /v.*/
+    - plan:
+        requires:
+            - validate
+            - checkfmt
+        filters:
+          tags:
+            only: /v.*/
+    - apply:
+        requires:
+            - plan
+        filters:
+          tags:
+            only: /v.*/
