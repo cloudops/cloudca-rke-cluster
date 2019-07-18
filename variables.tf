@@ -19,6 +19,11 @@ variable "network_id" {
 #####################
 # Cluster variables #
 #####################
+variable "kubernetes_version" {
+  description = "Kubernetes version to install in the cluster"
+  default     = "v1.14.3-rancher1-1"
+}
+
 variable "node_prefix" {
   description = "Prefix to be used in name of instances, e.g. `cca` in `cca-foo-service01`"
   default     = "cca"

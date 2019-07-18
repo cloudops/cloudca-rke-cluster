@@ -59,6 +59,8 @@ module "worker" {
 resource "rke_cluster" "cluster" {
   depends_on = [module.master.nodes_ready, module.worker.nodes_ready]
 
+  kubernetes_version = var.kubernetes_version
+
   dynamic "nodes" {
     iterator = node
     for_each = module.master.private_ips
@@ -85,11 +87,16 @@ resource "rke_cluster" "cluster" {
 }
 
 resource "local_file" "private_key_pem" {
-  filename          = "./private_key.pem"
+  filename          = "./generated/private_key.pem"
   sensitive_content = tls_private_key.ssh_key.private_key_pem
 }
 
 resource "local_file" "kube_cluster_yaml" {
-  filename = "./kube_config_cluster.yml"
-  content  = rke_cluster.cluster.kube_config_yaml
+  filename          = "./generated/kube_config.yaml"
+  sensitive_content = rke_cluster.cluster.kube_config_yaml
+}
+
+resource "local_file" "rke_cluster_yaml" {
+  filename          = "./generated/rke_cluster.yaml"
+  sensitive_content = rke_cluster.cluster.rke_cluster_yaml
 }
