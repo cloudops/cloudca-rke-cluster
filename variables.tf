@@ -21,7 +21,7 @@ variable "network_id" {
 #####################
 variable "kubernetes_version" {
   description = "Kubernetes version to install in the cluster"
-  default     = "v1.14.3-rancher1-1"
+  default     = "v1.15.3-rancher1-1"
 }
 
 variable "node_prefix" {

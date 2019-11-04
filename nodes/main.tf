@@ -26,6 +26,7 @@ resource "null_resource" "mount_volume" {
 
   provisioner "remote-exec" {
     inline = [
+      "if [ -d /data ]; then exit 0; fi",
       "sudo mkdir /data",
       "sudo parted /dev/xvdb mklabel gpt mkpart ext4 0 100% i",
       "sudo mkfs.ext4 /dev/xvdb1",
@@ -57,6 +58,18 @@ resource "null_resource" "node_setup" {
       "curl -fsSL https://get.docker.com | sudo bash",
       "sudo systemctl start docker.service",
       "sudo systemctl enable docker.service",
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "if [ ! -d /data/ -o ! -r /data/ ]; then exit 0; fi",
+      "if [ -d /data/var-lib-docker/ ]; then exit 0; fi",
+      "sudo mkdir -p /data/var-lib-docker",
+      "sudo systemctl stop docker",
+      "sudo mv /var/lib/docker /data/var-lib-docker",
+      "sudo ln -s /data/var-lib-docker /var/lib/docker",
+      "sudo systemctl start docker",
     ]
   }
 
