@@ -65,7 +65,7 @@ resource "rke_cluster" "cluster" {
   depends_on = [module.master.nodes_ready, module.worker.nodes_ready]
 
   kubernetes_version = var.kubernetes_version
-  cluster_name       = format("%s-%s", local.type, local.service)
+  cluster_name       = format("%s-%s", var.node_type, var.node_service)
 
   dynamic "nodes" {
     iterator = node
