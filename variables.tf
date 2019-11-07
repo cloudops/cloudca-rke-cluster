@@ -5,12 +5,22 @@ variable "api_key" {
   description = "cloud.ca API key to use"
 }
 
+variable "students" {
+  description = "list of students in the workshop"
+  type        = "list"
+}
+
 ############################
 # Infrastructure variables #
 ############################
 variable "environment_id" {
   description = "The environment ID to create resources in"
 }
+
+variable "vpc_id" {
+  description = "The vpc ID to be used"
+}
+
 
 variable "network_id" {
   description = "The network ID to create resources in"
