@@ -23,55 +23,50 @@ resource "cloudca_ssh_key" "ssh_key" {
 }
 
 module "master" {
-  source          = "./nodes"
-  node_prefix     = var.node_prefix
-  node_type       = var.node_type
-  node_service    = var.node_service
-  node_count      = var.master_count * length(var.students)
-  node_role       = "master"
-  node_username   = var.node_username
-  environment_id  = var.environment_id
-  network_id      = var.network_id
-  ssh_key_name    = cloudca_ssh_key.ssh_key.name
-  private_key_pem = tls_private_key.ssh_key.private_key_pem
-  cloudinit_data  = templatefile("${path.module}/files/cloud-init.yaml", {username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "")})
+  source         = "./nodes"
+  node_prefix    = var.node_prefix
+  node_type      = var.node_type
+  node_service   = var.node_service
+  node_count     = length(var.students)
+  node_role      = "master"
+  node_username  = var.node_username
+  environment_id = var.environment_id
+  network_id     = var.network_id
+  ssh_key_name   = cloudca_ssh_key.ssh_key.name
+  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
 }
 
 module "worker" {
-  source          = "./nodes"
-  node_prefix     = var.node_prefix
-  node_type       = var.node_type
-  node_service    = var.node_service
-  node_count      = var.worker_count * length(var.students)
-  node_role       = "worker"
-  node_username   = var.node_username
-  environment_id  = var.environment_id
-  network_id      = var.network_id
-  ssh_key_name    = cloudca_ssh_key.ssh_key.name
-  private_key_pem = tls_private_key.ssh_key.private_key_pem
-  cloudinit_data  = templatefile("${path.module}/files/cloud-init.yaml", {username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "")})
+  source         = "./nodes"
+  node_prefix    = var.node_prefix
+  node_type      = var.node_type
+  node_service   = var.node_service
+  node_count     = var.worker_count * length(var.students)
+  node_role      = "worker"
+  node_username  = var.node_username
+  environment_id = var.environment_id
+  network_id     = var.network_id
+  ssh_key_name   = cloudca_ssh_key.ssh_key.name
+  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
 }
 
 resource "cloudca_public_ip" "master_ip_endpoint" {
-  count          = var.master_count
+  count          = length(var.students)
   environment_id = var.environment_id
   vpc_id         = var.vpc_id
 }
 
 
-resource "cloudca_port_forwarding_rule" "master_ssh" {
-  depends_on         = [module.master.nodes_ready, cloudca_public_ip.master_ip_endpoint]
-  count              = var.master_count
-  environment_id     = var.environment_id
-  public_ip_id       = element(cloudca_public_ip.master_ip_endpoint.*.id, count.index)
-  public_port_start  = "22"
-  private_ip_id      = element(values(module.master.private_ips), count.index)
-  private_port_start = "22"
-  protocol           = "TCP"
+resource "cloudca_static_nat" "master_nat" {
+  depends_on     = [module.master.nodes_ready, cloudca_public_ip.master_ip_endpoint]
+  count          = length(var.students)
+  environment_id = var.environment_id
+  public_ip_id   = element(cloudca_public_ip.master_ip_endpoint.*.id, count.index)
+  private_ip_id  = element(values(module.master.private_ips), count.index)
 }
 
 resource "rke_cluster" "cluster" {
-  depends_on = [module.master.nodes_ready, module.worker.nodes_ready, cloudca_port_forwarding_rule.master_ssh]
+  depends_on = [module.master.nodes_ready, module.worker.nodes_ready, cloudca_static_nat.master_nat]
   count      = length(var.students)
 
   kubernetes_version = var.kubernetes_version
@@ -80,12 +75,12 @@ resource "rke_cluster" "cluster" {
   bastion_host {
     address = element(cloudca_public_ip.master_ip_endpoint.*.ip_address, count.index)
     ssh_key = tls_private_key.ssh_key.private_key_pem
-    user = var.node_username
+    user    = var.node_username
   }
 
   dynamic "nodes" {
     iterator = node
-    for_each = chunklist(keys(module.master.private_ips), var.master_count)[count.index]
+    for_each = keys(module.master.private_ips)
 
     content {
       address = node.value
@@ -114,18 +109,27 @@ resource "local_file" "private_key_pem" {
   sensitive_content = tls_private_key.ssh_key.private_key_pem
 }
 
-resource "local_file" "kube_cluster_yaml" {
-  depends_on        = [rke_cluster.cluster]
-  count             = length(var.students)
-  filename          = "./generated/kube_config_${count.index}.yaml"
-  file_permission   = "0600"
-  sensitive_content = rke_cluster.cluster[count.index].kube_config_yaml
-}
+resource "null_resource" "master_config" {
+  depends_on = [rke_cluster.cluster]
+  count      = length(var.students)
 
-resource "local_file" "rke_cluster_yaml" {
-  depends_on        = [rke_cluster.cluster]
-  count             = length(var.students)
-  filename          = "./generated/rke_cluster_${count.index}.yaml"
-  file_permission   = "0600"
-  sensitive_content = rke_cluster.cluster[count.index].rke_cluster_yaml
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir ~/.kube"
+    ]
+  }
+  provisioner "file" {
+    content     = rke_cluster.cluster[count.index].kube_config_yaml
+    destination = format("/home/%s/.kube/config", var.node_username)
+  }
+  provisioner "file" {
+    content     = rke_cluster.cluster[count.index].rke_cluster_yaml
+    destination = format("/home/%s/cluster.yaml", var.node_username)
+  }
+  connection {
+    type        = "ssh"
+    user        = var.node_username
+    host        = element(cloudca_public_ip.master_ip_endpoint.*.ip_address, count.index)
+    private_key = tls_private_key.ssh_key.private_key_pem
+  }
 }

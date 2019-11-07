@@ -57,11 +57,6 @@ variable "node_username" {
 ###################
 # Instances count #
 ###################
-variable "master_count" {
-  description = "Number of master node(s) to create"
-  default     = 1
-}
-
 variable "worker_count" {
   description = "Number of worker node(s) to create"
   default     = 2
