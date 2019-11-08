@@ -11,7 +11,7 @@ default: help
 .PHONY: clean
 clean: ## Clean cached and plan files
 	@ $(MAKE) --no-print-directory log-$@
-	rm -rf .terraform/ terraform.tfplan
+	rm -rf .terraform/ terraform.tfplan terraform.tfstate.backup terraform.tfstate generated/
 
 .PHONY: init
 init: ## Init configs

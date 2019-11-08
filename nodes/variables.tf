@@ -7,5 +7,4 @@ variable "node_username" {}
 variable "environment_id" {}
 variable "network_id" {}
 variable "ssh_key_name" {}
-variable "private_key_pem" {}
 variable "cloudinit_data" {}

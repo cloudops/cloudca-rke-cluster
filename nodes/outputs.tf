@@ -1,6 +1,6 @@
 output "private_ips" {
-  description = "List of private IP of node(s)"
-  value       = cloudca_instance.node.*.private_ip
+  description = "Map of private IP of node(s)"
+  value       = zipmap(cloudca_instance.node.*.private_ip, cloudca_instance.node.*.private_ip_id)
 }
 
 output "nodes_ready" {
