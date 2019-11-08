@@ -57,6 +57,25 @@ Description: The network ID to create resources in
 
 Type: `string`
 
+### vpc\_id
+
+Description: The vpc ID of the network used
+
+Type: `string`
+
+### students
+
+Description: The list of students attending the workshop
+
+Type: `list`
+
+Example:
+```yaml
+[
+    "phil",
+    "scott"
+]
+```
 ## Optional Inputs
 
 The following input variables are optional (have default values):
@@ -107,7 +126,18 @@ Description: The username to create in the nodes with SSH access
 
 Type: `string`
 
-Default: `"rke"`
+Default: `"student"`
+
+### node\_password
+
+Description: The password for the student to sign in to the workshop
+
+Type: `string`
+
+#### To generate password for cloud-init
+```bash
+docker run --rm -it flyinprogrammer/mkpasswd --method=SHA-512 --rounds=4096
+```
 
 ### worker\_count
 
@@ -129,6 +159,10 @@ Description: List of private IP of master node(s)
 
 Description: List of private IP of worker node(s)
 
+### master\_endpoint\_ips
+
+Description: List of master endpoint IPs to access the clusters externally
+
 <!-- terraform-docs ends -->
 
 ## Usage
@@ -143,6 +177,13 @@ Description: List of private IP of worker node(s)
 
     ```toml
     api_key = "<cloud_ca_API_KEY>"
+    vpc_id = "<cloud_ca_VPC_ID>"
+    environment_id = "<cloud_ca_ENVIRONMENT_ID>"
+    network_id = "<cloud_ca_NETWORK_ID>"
+    students = [
+        "<STUDENT_NAME>"
+    ]
+
     ```
 
 3. Execute the following command to initialize the repository:
@@ -175,9 +216,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```
-
-## To generate password for cloud-init
-```bash
-docker run --rm -it flyinprogrammer/mkpasswd --method=SHA-512 --rounds=4096
 ```

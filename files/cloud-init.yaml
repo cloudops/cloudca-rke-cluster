@@ -12,7 +12,8 @@ users:
   - name: ${username}
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: docker
-    lock_passwd: true
+    lock_passwd: false
+    passwd: ${password}
     shell: /bin/bash
     ssh_authorized_keys:
       - "${public_key}"

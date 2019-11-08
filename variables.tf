@@ -36,7 +36,7 @@ variable "kubernetes_version" {
 
 variable "node_prefix" {
   description = "Prefix to be used in name of instances, e.g. `cca` in `cca-foo-service01`"
-  default     = "cca"
+  default     = "wkp"
 }
 
 variable "node_type" {
@@ -51,7 +51,12 @@ variable "node_service" {
 
 variable "node_username" {
   description = "The username to create in the nodes with SSH access"
-  default     = "rke"
+  default     = "student"
+}
+
+variable "node_password" {
+  description = "The password to the created instances"
+  default     = "$6$rounds=4096$PrIHpY39x6Qu/89Q$kBz3eWhgABARVDPhv1XVkCgEftdBdVh1Y7v940krZba4TL9QoKU.Q5WtuaHCQIt.WrjOqiq.Ud6M7Lsg9g9yD1"
 }
 
 ###################

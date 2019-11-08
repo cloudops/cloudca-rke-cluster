@@ -33,7 +33,7 @@ module "master" {
   environment_id = var.environment_id
   network_id     = var.network_id
   ssh_key_name   = cloudca_ssh_key.ssh_key.name
-  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
+  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, password = var.node_password, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
 }
 
 module "worker" {
@@ -47,7 +47,7 @@ module "worker" {
   environment_id = var.environment_id
   network_id     = var.network_id
   ssh_key_name   = cloudca_ssh_key.ssh_key.name
-  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
+  cloudinit_data = templatefile("${path.module}/files/cloud-init.yaml", { username = var.node_username, password = var.node_password, public_key = replace(tls_private_key.ssh_key.public_key_openssh, "\n", "") })
 }
 
 resource "cloudca_public_ip" "master_ip_endpoint" {
@@ -65,8 +65,16 @@ resource "cloudca_static_nat" "master_nat" {
   private_ip_id  = element(values(module.master.private_ips), count.index)
 }
 
-resource "rke_cluster" "cluster" {
+resource "null_resource" "wait" {
   depends_on = [module.master.nodes_ready, module.worker.nodes_ready, cloudca_static_nat.master_nat]
+
+  provisioner "local-exec" {
+    command = "sleep 180"
+  }
+
+}
+resource "rke_cluster" "cluster" {
+  depends_on = [null_resource.wait]
   count      = length(var.students)
 
   kubernetes_version = var.kubernetes_version
@@ -78,16 +86,11 @@ resource "rke_cluster" "cluster" {
     user    = var.node_username
   }
 
-  dynamic "nodes" {
-    iterator = node
-    for_each = keys(module.master.private_ips)
-
-    content {
-      address = node.value
-      user    = var.node_username
-      ssh_key = tls_private_key.ssh_key.private_key_pem
-      role    = ["controlplane", "etcd"]
-    }
+  nodes {
+    address = keys(module.master.private_ips)[count.index]
+    user    = var.node_username
+    ssh_key = tls_private_key.ssh_key.private_key_pem
+    role    = ["controlplane", "etcd"]
   }
 
   dynamic "nodes" {
