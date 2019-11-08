@@ -27,3 +27,4 @@ runcmd:
   - sudo apt-get update
   - sudo apt-get install -y kubectl
   - echo "source <(kubectl completion bash)" >> /home/${username}/.bashrc
+  - touch /home/${username}/initDone

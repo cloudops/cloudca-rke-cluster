@@ -67,9 +67,25 @@ resource "cloudca_static_nat" "master_nat" {
 
 resource "null_resource" "wait" {
   depends_on = [module.master.nodes_ready, module.worker.nodes_ready, cloudca_static_nat.master_nat]
+  count      = length(var.students)
 
-  provisioner "local-exec" {
-    command = "sleep 180"
+  provisioner "file" {
+    source      = "${path.module}/files/wait.sh"
+    destination = "/tmp/wait.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/wait.sh",
+      "/tmp/wait.sh",
+    ]
+  }
+
+  connection {
+    type        = "ssh"
+    user        = var.node_username
+    host        = element(cloudca_public_ip.master_ip_endpoint.*.ip_address, count.index)
+    private_key = tls_private_key.ssh_key.private_key_pem
   }
 
 }
